@@ -24,7 +24,6 @@ public class CorsoDAO {
 		try {
 			Connection conn = ConnectDB.getConnection();
 			PreparedStatement st = conn.prepareStatement(sql);
-
 			ResultSet rs = st.executeQuery();
 
 			while (rs.next()) {
@@ -38,6 +37,8 @@ public class CorsoDAO {
 
 				// Crea un nuovo JAVA Bean Corso
 				// Aggiungi il nuovo oggetto Corso alla lista corsi
+				Corso c=new Corso(codins,numeroCrediti,nome,periodoDidattico);
+				corsi.add(c);
 			}
 
 			conn.close();
@@ -62,17 +63,76 @@ public class CorsoDAO {
 	/*
 	 * Ottengo tutti gli studenti iscritti al Corso
 	 */
-	public void getStudentiIscrittiAlCorso(Corso corso) {
-		// TODO
+	public List<Studente> getStudentiIscrittiAlCorso(Corso corso) {
+		String sql="SELECT s.matricola,s.nome,s.cognome,s.cds "
+				+ "FROM studente AS s, iscrizione AS i "
+				+ "WHERE s.matricola=i.matricola AND i.codins=?";
+		List<Studente> result=new LinkedList<Studente>();
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setString(1,corso.getCodins());
+			ResultSet rs = st.executeQuery();
+			
+			while(rs.next()) {
+				Studente s=new Studente(rs.getInt("matricola"),rs.getString("nome"),rs.getString("cognome"),rs.getString("CDS"));
+				result.add(s);
+			}
+			
+			rs.close();
+			st.close();
+			conn.close();
+		} catch(SQLException e) {
+			throw new RuntimeException(e);
+		}
+		return result;
 	}
 
 	/*
 	 * Data una matricola ed il codice insegnamento, iscrivi lo studente al corso.
 	 */
 	public boolean inscriviStudenteACorso(Studente studente, Corso corso) {
-		// TODO
+		String sql="SELECT * "
+				+ "FROM iscrizione "
+				+ "WHERE codins=? AND matricola=?";
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setString(1,corso.getCodins());
+			st.setInt(2, studente.getMatricola());
+			ResultSet rs = st.executeQuery();
+			
+			if(rs.next()) {
+				rs.close();
+				st.close();
+				conn.close();
+				return true;
+			}
+			else {
+				rs.close();
+				st.close();
+				conn.close();
+				iscrivi(studente,corso);
+				return false;
+			}
+		} catch(SQLException e) {
+			throw new RuntimeException(e);
+		}
 		// ritorna true se l'iscrizione e' avvenuta con successo
-		return false;
+	}
+	
+	private void iscrivi(Studente s, Corso c) {
+		String sql="INSERT INTO iscrizione "
+				+ "VALUES (?,?)";
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setString(2,c.getCodins());
+			st.setInt(1, s.getMatricola());
+			ResultSet rs = st.executeQuery();
+		} catch(SQLException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 }
